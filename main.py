@@ -29,17 +29,32 @@ TAB_LEDGER = {
 }
 
 
-def count_open_tabs(ledger):
-    """Add up every group in the ledger into one honest total."""
-    total = 0
+def validate_ledger(ledger):
+    """Refuse a ledger that cannot be a real count of open tabs."""
+    if not ledger:
+        raise ValueError("ledger is empty: no tabs counted")
     for group, tabs in ledger.items():
+        if not isinstance(tabs, int) or isinstance(tabs, bool):
+            raise ValueError(f"group {group!r} is not a whole number of tabs")
         if tabs < 0:
             raise ValueError(f"group {group!r} has a negative tab count")
+        if tabs > 100000:
+            raise ValueError(f"group {group!r} claims more tabs than a browser holds")
+
+
+def count_open_tabs(ledger):
+    """Add up every group in the ledger into one honest total."""
+    validate_ledger(ledger)
+    total = 0
+    for group, tabs in ledger.items():
         total += tabs
     return total
 
 
-def main():
+def main(argv=None):
+    args = list(sys.argv[1:] if argv is None else argv)
+    show_breakdown = "--breakdown" in args
+
     total = count_open_tabs(TAB_LEDGER)
 
     # The gate wants 1 to 5 characters of digits; a real tab count fits.
@@ -55,6 +70,9 @@ def main():
         f.write(text)
 
     print(f"wrote {text} open tabs to {out_path}")
+    if show_breakdown:
+        for group, tabs in TAB_LEDGER.items():
+            print(f"  {tabs:>5}  {group}")
     return 0
 
 
